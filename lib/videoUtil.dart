@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
-// import 'package:path_provider_windows/path_provider_windows.dart';
 
 class VideoUtil {
   static String workPath = '';
@@ -10,13 +9,13 @@ class VideoUtil {
   // final PathProviderWindows provider = PathProviderWindows();
 
   static Future<void> getAppTempDirectory() async {
-    // appTempDir = '${(await PathProviderWindows().getTemporaryPath())}';
     appTempDir = '${(await getTemporaryDirectory()).path}';
   }
 
   static Future<void> saveImageFileToDirectory(
       byteData, String localName) async {
-    Directory(appTempDir).create().then((Directory directory) async {
+    Directory(appTempDir + '/videos').create();
+    Directory(appTempDir + '/images').create().then((Directory directory) async {
       final file = File('${directory.path}/$localName');
 
       file.writeAsBytesSync(byteData.buffer
@@ -26,19 +25,19 @@ class VideoUtil {
   }
 
   static void deleteTempDirectory() {
-    Directory(appTempDir ).deleteSync(recursive: true);
+    Directory(appTempDir + '/images' ).deleteSync(recursive: true);
   }
 
   static String generateEncodeVideoScript(String videoCodec, String fileName) {
-    String outputPath = appTempDir + '/' + fileName;
+    String outputPath = appTempDir + '/videos/' + fileName;
     return "-hide_banner -y -i '" +
         appTempDir +
-        "/" +
+        "/images/" +
         "image_%d.jpg" +
         "' " +
         "-c:v " +
         videoCodec +
-        " -r 12 " +
+        " -r 15 " +
         outputPath;
   }
 }

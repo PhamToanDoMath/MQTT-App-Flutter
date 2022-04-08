@@ -66,9 +66,9 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
 
   final String title = 'SOS';
-  final String ngrok = 'http://42ca-34-136-100-187.ngrok.io/';
+  final String ngrok = 'http://29d7-35-231-190-14.ngrok.io/';
 
-  final WebSocketChannel channel = IOWebSocketChannel.connect(Uri.parse('ws://192.168.1.9:8000/'));
+  final WebSocketChannel channel = IOWebSocketChannel.connect(Uri.parse('ws://192.168.137.69:8000/'));
   final FlutterFFmpeg _flutterFFmpeg = new FlutterFFmpeg();
   StreamController streamController = new StreamController.broadcast();
   
@@ -100,7 +100,7 @@ class _HomeState extends State<Home> {
           isRecording = false;
           frameNum = 0;
           setText("Start Processing...");
-          makeVideoWithFFMpeg(() => sendRequestToServer());
+          makeVideoWithFFMpeg(sendRequestToServer);
         }
       }
     }, onDone: () {
@@ -197,7 +197,7 @@ class _HomeState extends State<Home> {
 
   makeVideoWithFFMpeg(callback) {
     // pr.show();
-    String tempVideofileName = "video.mp4";
+    String tempVideofileName = "${DateTime.now().millisecondsSinceEpoch}.mp4";
     execute(VideoUtil.generateEncodeVideoScript("mpeg4", tempVideofileName))
         .then((rc) {
       // pr.hide();
@@ -207,7 +207,7 @@ class _HomeState extends State<Home> {
         String outputPath = VideoUtil.appTempDir + "/$tempVideofileName";
         _saveVideo(outputPath);
 
-        callback();
+        callback(tempVideofileName);
       }
     });
   }
@@ -231,13 +231,13 @@ class _HomeState extends State<Home> {
     return await _flutterFFmpeg.execute(command);
   }
 
-  void sendRequestToServer() async {
+  void sendRequestToServer(String tempFileName) async {
     print('Send request to server ....');
 
     var request = new http.MultipartRequest("POST", Uri.parse('${ngrok}sign2text'));
     request.files.add( await http.MultipartFile.fromPath(
         'vid',
-        '${VideoUtil.appTempDir}/video.mp4',
+        '${VideoUtil.appTempDir}/videos/${tempFileName}',
         filename: 'video.mp4',
         contentType: MediaType.parse('video/mp4'),
     ));
