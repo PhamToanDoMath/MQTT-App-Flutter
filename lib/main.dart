@@ -14,13 +14,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-import 'package:flutter_config/flutter_config.dart';
 
-// import 'blinkingTimer.dart';
 import 'videoUtil.dart';
 void main() {
-  // WidgetsFlutterBinding.ensureInitialized(); // Required by FlutterConfig
-  // await FlutterConfig.loadEnvVariables();
   runApp(SplashScreen());
 }
 
@@ -66,11 +62,11 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
 
   final String title = 'SOS';
-  final String ngrok = 'http://29d7-35-231-190-14.ngrok.io/';
-
-  final WebSocketChannel channel = IOWebSocketChannel.connect(Uri.parse('ws://192.168.137.69:8000/'));
-  final FlutterFFmpeg _flutterFFmpeg = new FlutterFFmpeg();
-  StreamController streamController = new StreamController.broadcast();
+  final String ngrok = 'http://5adc-34-141-246-186.ngrok.io/';
+  final String wsUrl = 'ws://192.168.137.146:8000/';
+  WebSocketChannel channel = IOWebSocketChannel.connect(Uri.parse('ws://192.168.137.146:8000/'));
+  final FlutterFFmpeg _flutterFFmpeg = FlutterFFmpeg();
+  late StreamController streamController;
   
   bool isLandscape = false;
   bool isRecording = false;
@@ -78,8 +74,6 @@ class _HomeState extends State<Home> {
   var data = [1,2,3];
   var _globalKey = new GlobalKey();
 
-  bool isStop = true;
-  bool isListening = false;
   var result = 'Press Start';
 
   @override
@@ -88,24 +82,12 @@ class _HomeState extends State<Home> {
     VideoUtil.workPath = 'images';
     VideoUtil.getAppTempDirectory();
 
+    channel.sink.done.then((dynamic _) => _onDisconnected());
+    streamController = StreamController.broadcast();
     streamController.addStream(channel.stream);
 
-    streamController.stream.listen((data) {
-      if (data.runtimeType == String){
-        if(data == 'START'){
-          setText('Recording...');
-          isRecording = true;
-        }
-        else if(data == 'STOP'){
-          isRecording = false;
-          frameNum = 0;
-          setText("Start Processing...");
-          makeVideoWithFFMpeg(sendRequestToServer);
-        }
-      }
-    }, onDone: () {
-      print('Local websocket connection with ESP32: closed\n');
-    });
+    print('Initialize event handler');
+    initEventHandler();
   }
 
   @override
@@ -138,7 +120,26 @@ class _HomeState extends State<Home> {
                   ),
                 ),
               ),
-              flex: 2,
+              flex: 3,
+            ),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  RaisedButton(
+                    child:Text(
+                      "Reset connection",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    onPressed: ()=> _onDisconnected() ,
+                    color: Colors.green,
+                    textColor: Colors.white,
+                    padding: EdgeInsets.all(10.0),
+                    splashColor: Colors.grey,
+                  ),
+                ],
+              ),
+              flex: 1,
             ),
             Expanded(
               child: Container(
@@ -148,7 +149,7 @@ class _HomeState extends State<Home> {
                   builder: (context, snapshot) => handleDataStream(snapshot),
                 ),
               ),
-              flex: 2,
+              flex: 3,
             ),
           ],
         ),
@@ -271,5 +272,70 @@ class _HomeState extends State<Home> {
     });
   }
 
+  initWebSocketConnection() async {
+    // streamController.sink.close();
+    channel.sink.close();
 
+    print("Connecting...");
+    channel = await connectWs();
+    streamController = StreamController.broadcast(sync:true);
+    streamController.addStream(channel.stream);
+    initEventHandler();
+    print("Socket connection initialized");
+    // channel.sink.done.then((dynamic _) => _onDisconnected());
+
+  }
+
+  initEventHandler(){
+    streamController.stream.listen((data) {
+      if (data.runtimeType == String){
+        if(data == 'START'){
+          setText('Recording...');
+          isRecording = true;
+        }
+        else if(data == 'STOP'){
+          isRecording = false;
+          frameNum = 0;
+          setText("Start Processing...");
+          makeVideoWithFFMpeg(sendRequestToServer);
+        }
+      }
+    }, onDone: () {
+      print('Local websocket connection with ESP32: closed\n');
+      initWebSocketConnection();
+    },
+        onError: (e) {
+          showToast('Connection Error');
+          print('Server error: $e');
+          initWebSocketConnection();
+        });
+  }
+
+  connectWs() async{
+    try {
+      return await WebSocketChannel.connect(Uri.parse(wsUrl));
+    } catch  (e) {
+      print("Error! can not connect WS connectWs " + e.toString());
+      await Future.delayed(Duration(milliseconds: 1000));
+      return await connectWs();
+    }
+  }
+
+  void _onDisconnected() {
+    print('On channel done');
+    showToast('Retrying to connect');
+    initWebSocketConnection();
+    setText('PRESS START');
+  }
+
+  void showToast(String text,{time = 1}){
+    Fluttertoast.showToast(
+        msg: text,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: time,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0);
+  }
 }

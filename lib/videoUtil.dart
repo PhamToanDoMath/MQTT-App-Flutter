@@ -37,7 +37,7 @@ class VideoUtil {
         "' " +
         "-c:v " +
         videoCodec +
-        " -r 15 " +
+        " -r 6 " +
         outputPath;
   }
 }
