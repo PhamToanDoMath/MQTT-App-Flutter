@@ -10,4 +10,11 @@ The application recognizes the hand sign in terms of video/images and translate 
 The application connects with Arduino ESP32 Camera through WebSocket within same WiFi connection, receives signal from Adafruit to start and stop recording video.
 After getting stop signal from Adafruit, it will stop video streaming, packetize and send to server to process the signal and return the correct sign pose. 
 
+
+
 Reference video: [Youtube](https://youtu.be/Y0pJ8isd8jI)
+
+
+<p align="center">
+  <img src="https://github.com/PhamToanDoMath/MQTT-App-Flutter/blob/main/images/input_stream_usecase.png" width="800" title="hover text">
+</p>
